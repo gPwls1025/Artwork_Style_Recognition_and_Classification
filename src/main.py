@@ -1,6 +1,7 @@
 
 def main():
     import os
+    from datetime import datetime
     from dotenv import load_dotenv
     from ingest.met_art_ingest import MetArtDataIngester
     from ingest.log import IngestLogger
@@ -14,11 +15,8 @@ def main():
     log_batch_size = int(os.getenv('LOG_BATCH_SIZE'))
     log_file = os.getenv('LOG_FILE_NAME')
 
-    with open(log_file, 'r') as f:
-        last_line = f.readlines()[-1]
-        last_date_ingested = last_line.split(' ')[0]
-
     logger = IngestLogger(log_file=log_file)
+    last_date_ingested = logger.get_last_date_ingested()
     
     ingester = MetArtDataIngester(
         db_uri=db_uri,
@@ -29,10 +27,7 @@ def main():
         last_date_ingested=last_date_ingested
     )
 
-    logger.log(f'Starting ingest...')
-    ingester.ingest_objects()
-    logger.log(f'Ingest complete.')
-
+    ingester.ingest_objects(logger=logger)
 
 
 if __name__=="__main__":

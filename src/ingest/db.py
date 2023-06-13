@@ -16,6 +16,9 @@ class DBConnection:
     def execute(self, query:str):
         return self.con.execute(text(query))
     
+    def commit(self):
+        self.con.commit()
+    
     def table_exists(self, table_name:str):
         query = f"SHOW TABLES LIKE '{table_name}'"
         return len(self.execute(query=query).all())>0
@@ -36,9 +39,13 @@ class DBConnection:
     def delete_from_db(self, table_name:str, id_col:str, id_list:list[int]):
         query = f"DELETE FROM {table_name} WHERE {id_col} IN ({','.join([str(id) for id in id_list])})"
         self.execute(query=query)
+        self.commit()
         print(f"Deleted {len(id_list)} rows from {table_name}")
+        print()
 
     def set_rows_inactive(self, table_name:str, id_col:str, id_list:list[int], active_col:str='isActive'):
         query = f"UPDATE {table_name} SET {active_col}=0 WHERE {id_col} IN ({','.join([str(id) for id in id_list])})"
         self.execute(query=query)
+        self.commit()
         print(f"Set {len(id_list)} rows in {table_name} to inactive")
+        print()

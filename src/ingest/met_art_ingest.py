@@ -4,6 +4,7 @@ import asyncio
 import aiohttp
 from datetime import datetime, timedelta
 from ingest.db import DBConnection
+from ingest.log import IngestLogger
 
 class MetArtDataIngester:
 
@@ -40,18 +41,19 @@ class MetArtDataIngester:
         
         object_ids_to_insert = list(set(all_object_ids) - set(db_object_ids) | set(updated_object_ids))
         object_ids_to_update = list(set(db_object_ids) & set(updated_object_ids))
-        object_ids_to_delete = list((set(db_object_ids) - set(all_object_ids)))
+        object_ids_to_delete = list(set(db_object_ids) - set(all_object_ids))
 
         return object_ids_to_insert, object_ids_to_update, object_ids_to_delete
 
-    def ingest_objects(self):
+    def ingest_objects(self, logger:IngestLogger=None):
         object_ids_to_insert, object_ids_to_update, object_ids_to_delete = self.__get_object_ids()
 
         print(f"Total objects to insert: {len(object_ids_to_insert)}")
         print(f"Total objects to update: {len(object_ids_to_update)}")
         print(f"Total objects to delete: {len(object_ids_to_delete)}")
-        print("\n")
+        print()
 
+        logger.log(f"Starting ingest...")
         # Inactivate objects that are no longer in the Met API
         if object_ids_to_delete:
             with DBConnection(self.db_uri) as db:
@@ -65,6 +67,7 @@ class MetArtDataIngester:
         # Ingest new or updated objects
         if object_ids_to_insert:
             asyncio.run(self.__ingest_objects_async(object_ids_to_insert))
+        logger.log(f"Ingest complete!")
 
 
     async def __ingest_objects_async(self, object_ids:list[int]=[]):
@@ -76,13 +79,14 @@ class MetArtDataIngester:
         print(f"Total objects to ingest: {len(object_ids)}")
         print(f"Batch size: {self.ingest_batch_size}")
         print(f"Batches needed: {len(object_ids)//self.ingest_batch_size + 1}")
-        print("\n")
+        print()
         while current<len(object_ids) and failed<3:
             object_id_batch = object_ids[current:(current+self.ingest_batch_size)]
             try:
                 await self.__ingest_batch(object_id_batch = object_id_batch, batch_num = current//self.ingest_batch_size + 1)
                 current += self.ingest_batch_size
-                print(f"Ingested {current} of {len(object_ids)} objects")
+                print(f"Ingested {min(current, len(object_ids))} of {len(object_ids)} objects")
+                print()
                 failed = 0
             except Exception as e:
                 failed += 1
@@ -134,7 +138,7 @@ class MetArtDataIngester:
                 results.clear()
             
         print(f"Finished batch {batch_num}")
-        print("\n")
+        print()
 
 
     def __write_to_db(self, data):
