@@ -3,8 +3,8 @@ import requests
 import asyncio
 import aiohttp
 from datetime import datetime, timedelta
-from ingest.db import DBConnection
-from ingest.log import IngestLogger
+from db.db import DBConnection
+from log.log import IngestLogger
 
 class MetArtDataIngester:
 
@@ -53,7 +53,9 @@ class MetArtDataIngester:
         print(f"Total objects to delete: {len(object_ids_to_delete)}")
         print()
 
-        logger.log(f"Starting ingest...")
+        if logger:
+            logger.log(f"Starting ingest with {len(object_ids_to_insert)-len(object_ids_to_update)} objects to insert, {len(object_ids_to_update)} objects to update, and {len(object_ids_to_delete)} objects to delete.")
+
         # Inactivate objects that are no longer in the Met API
         if object_ids_to_delete:
             with DBConnection(self.db_uri) as db:
@@ -67,7 +69,9 @@ class MetArtDataIngester:
         # Ingest new or updated objects
         if object_ids_to_insert:
             asyncio.run(self.__ingest_objects_async(object_ids_to_insert))
-        logger.log(f"Ingest complete!")
+        
+        if logger:
+            logger.log(f"Ingest complete!")
 
 
     async def __ingest_objects_async(self, object_ids:list[int]=[]):
@@ -97,6 +101,7 @@ class MetArtDataIngester:
             raise exception
         else:
             print("Finished ingest.")
+            print()
 
 
     async def __ingest_batch(self, object_id_batch:list[int], batch_num:int=0):

@@ -1,6 +1,6 @@
 import logging
 
-class IngestLogger:
+class Logger:
 
     def __init__(self, log_file:str, log_level:str='INFO'):
         self.log_file = log_file
@@ -15,6 +15,13 @@ class IngestLogger:
     def log(self, message:str):
         self.logger.info(message)
 
+
+
+class IngestLogger(Logger):
+
+    def __init__(self, log_file:str, log_level:str='INFO'):
+        super().__init__(log_file, log_level)
+
     def get_last_date_ingested(self):
         with open(self.log_file, 'r') as f:
             lines = f.readlines()
@@ -25,3 +32,9 @@ class IngestLogger:
                     break
         
         return last_date_ingested
+    
+
+class CleanLogger(Logger):
+
+    def __init__(self, log_file:str, log_level:str='INFO'):
+        super().__init__(log_file, log_level)

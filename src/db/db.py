@@ -49,3 +49,22 @@ class DBConnection:
         self.commit()
         print(f"Set {len(id_list)} rows in {table_name} to inactive")
         print()
+
+    def get_table(self, table_name:str):
+        return pd.read_sql(table_name, con=self.con)
+    
+    def get_columns(self, table_name:str, columns:list[str]):
+        return pd.read_sql(table_name, columns=columns,con=self.con)
+    
+    def get_distinct_columns(self, table_name:str, columns:list[str]):
+        return pd.read_sql(f"SELECT DISTINCT {','.join(columns)} FROM {table_name}", con=self.con)
+    
+    def write_df_to_db(self, df:pd.DataFrame, table_name:str, use_index_as_pkey:bool=False, id_col:str=None, if_exists:str='replace'):
+        if use_index_as_pkey:
+            df.to_sql(name=table_name, con=self.con, if_exists=if_exists, index_label=id_col, method='multi')
+        else:
+            df.to_sql(name=table_name, con=self.con, if_exists=if_exists, index=False, method='multi')
+        self.execute(f"ALTER TABLE {table_name} ADD PRIMARY KEY ({id_col});")
+        self.commit()
+        print(f"Created table {table_name} with {len(df.index)} rows")
+
